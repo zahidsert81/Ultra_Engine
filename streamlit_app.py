@@ -47,7 +47,7 @@ texts = {
 T = texts[lang]
 
 # Çerez Dosyası Kontrolü (GitHub depondaki isme göre)
-cookie_path = "cookies.txt" 
+cookie_path = "cookies.text" 
 if os.path.exists(cookie_path):
     st.sidebar.success(T["cookie_ok"])
 else:
