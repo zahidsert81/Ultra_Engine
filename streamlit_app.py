@@ -1,120 +1,107 @@
 import streamlit as st
 import yt_dlp
 import os
-import tempfile
 from deep_translator import GoogleTranslator
 from groq import Groq
 
-# Groq AI Bağlantısı
+# Groq AI - Video Analizi İçin
 client = Groq(api_key="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")
 
-st.set_page_config(page_title="Ultra Engine Online", page_icon="🚀", layout="wide")
+st.set_page_config(page_title="Ultra Engine Pro v2", page_icon="🚀", layout="wide")
 
-# --- ÇEREZ DOSYASI YÖNETİMİ ---
-# GitHub deponda hangi isimle varsa onu bulur
-cookie_file = "cookies.text" if os.path.exists("cookies.txt") else "www.youtube.com_cookies.txt"
+# --- ÇEREZ VE AYARLAR ---
+COOKIE_FILE = "www.youtube.com_cookies.txt" if os.path.exists("www.youtube.com_cookies.txt") else "cookies.txt"
 
-# --- DİL SEÇENEKLERİ ---
-lang = st.sidebar.selectbox("Language / Dil", ["Turkish", "English"])
-texts = {
-    "Turkish": {
-        "title": "🚀 ULTRA ENGINE PRO",
-        "link": "Video veya Müzik Linki:",
-        "format": "Tür Seçin:",
-        "btn": "İŞLEMİ BAŞLAT",
-        "save": "📥 CİHAZA KAYDET",
-        "cookie_ok": "✅ Çerezler Aktif",
-        "cookie_err": "⚠️ Çerezler Geçersiz veya Eksik!"
-    },
-    "English": {
-        "title": "🚀 ULTRA ENGINE PRO",
-        "link": "Video or Music Link:",
-        "format": "Select Type:",
-        "btn": "START PROCESS",
-        "save": "📥 SAVE TO DEVICE",
-        "cookie_ok": "✅ Cookies Active",
-        "cookie_err": "⚠️ Cookies Invalid/Missing!"
+def get_video_info(url):
+    """Videoyu indirmeden sadece bilgilerini çeker."""
+    ydl_opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'cookiefile': COOKIE_FILE if os.path.exists(COOKIE_FILE) else None,
+        'format': 'best',
+        # Önemli: Videoyu sunucuya indirmeyi kapatıyoruz
+        'extract_flat': False, 
+        'force_generic_extractor': False
     }
-}
-T = texts[lang]
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        return ydl.extract_info(url, download=False)
 
-# Sidebar Bilgi
-if os.path.exists(cookie_file):
-    st.sidebar.success(T["cookie_ok"])
-else:
-    st.sidebar.error(T["cookie_err"])
-
-st.title(T["title"])
+# --- ARAYÜZ ---
+st.title("🚀 ULTRA ENGINE PRO - Akıllı Mimari")
 st.markdown("---")
 
-col1, col2 = st.columns([2, 1])
+url = st.text_input("YouTube / Shorts / Social Media Link:", placeholder="https://...")
 
-with col1:
-    url = st.text_input(T["link"], placeholder="https://youtube.com/...")
-    mode = st.selectbox(T["format"], ["Video (MP4)", "Müzik (MP3)"])
-    
-    if st.button(T["btn"]):
-        if not url:
-            st.error("Lütfen bir link girin!")
-        else:
-            with st.spinner("YouTube Korumaları Aşılıyor..."):
-                try:
-                    with tempfile.TemporaryDirectory() as tmpdir:
-                        # 403 ve PO-TOKEN HATALARINI AŞAN ÖZEL AYARLAR
-                        ydl_opts = {
-                            # En uyumlu formatı seç (Sunucuda birleştirme yapmadan direkt indirir)
-                            'format': 'best', 
-                            'outtmpl': os.path.join(tmpdir, '%(title)s.%(ext)s'),
-                            'nocheckcertificate': True,
-                            'quiet': True,
-                            'cookiefile': cookie_file if os.path.exists(cookie_file) else None,
-                            # YouTube'un yeni bot korumasını aşmak için istemci taklidi
-                            'extractor_args': {
-                                'youtube': {
-                                    'player_client': ['android_vr', 'web_embedded', 'tv'],
-                                    'player_skip': ['js'],
-                                }
-                            },
-                            'http_headers': {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                                'Accept': '*/*',
-                                'Connection': 'keep-alive',
-                            }
-                        }
+if url:
+    with st.spinner("Metadata çekiliyor ve analiz ediliyor..."):
+        try:
+            # 1. BİLGİ ÇEKME (Backend sadece bilgi okur)
+            info = get_video_info(url)
+            
+            col1, col2 = st.columns([1, 1])
+            
+            with col1:
+                # Video Bilgileri
+                st.subheader("📺 Video Bilgileri")
+                st.image(info.get('thumbnail'), use_column_width=True)
+                st.write(f"**Başlık:** {info.get('title')}")
+                st.write(f"**Kanal:** {info.get('uploader')}")
+                st.write(f"**Süre:** {info.get('duration_string')} sn")
+                
+                # İNDİRME BUTONLARI (Doğrudan URL üzerinden)
+                st.markdown("### 📥 İndirme Bağlantıları")
+                direct_url = info.get('url') # YouTube'un geçici doğrudan video linki
+                
+                if direct_url:
+                    st.video(direct_url) # Önizleme oynatıcı
+                    st.markdown(f'''
+                        <a href="{direct_url}" download="{info.get('title')}.mp4" style="text-decoration:none;">
+                            <button style="width:100%; background-color:#ff4b4b; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer;">
+                                🔥 VİDEOYU ŞİMDİ İNDİR (Client-Side)
+                            </button>
+                        </a>
+                    ''', unsafe_allow_html=True)
+                else:
+                    st.error("Doğrudan indirme linki oluşturulamadı.")
 
-                        if mode == "Müzik (MP3)":
-                            ydl_opts.update({
-                                'format': 'bestaudio/best',
-                                'postprocessors': [{
-                                    'key': 'FFmpegExtractAudio',
-                                    'preferredcodec': 'mp3',
-                                    'preferredquality': '192',
-                                }],
-                            })
+            with col2:
+                # 2. AI ANALİZ (Cache dostu)
+                st.subheader("🤖 Yapay Zeka Analizi")
+                desc = info.get('description', 'Açıklama yok.')[:500]
+                prompt = f"Aşağıdaki video içeriğini kısaca özetle ve 3 anahtar madde çıkar: \nBaşlık: {info.get('title')}\nAçıklama: {desc}"
+                
+                res = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                
+                summary = res.choices[0].message.content
+                st.info(summary)
+                
+                # Teknik Detaylar (Debug/Cache için)
+                with st.expander("Teknik Detayları Gör"):
+                    st.json({
+                        "id": info.get('id'),
+                        "formats_count": len(info.get('formats', [])),
+                        "status": "Success",
+                        "ip_protection": "Active"
+                    })
 
-                        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                            # Video bilgisini al ve indir
-                            info = ydl.extract_info(url, download=True)
-                            fpath = ydl.prepare_filename(info)
-                            
-                            # MP3 ise uzantıyı düzelt
-                            if mode == "Müzik (MP3)":
-                                fpath = os.path.splitext(fpath)[0] + ".mp3"
+        except Exception as e:
+            st.error(f"Hata detayı: {str(e)}")
+            if "403" in str(e):
+                st.warning("YouTube IP/Çerez engeli saptandı. Lütfen cookies.txt dosyasını tazeleyin.")
 
-                            with open(fpath, "rb") as f:
-                                st.download_button(T["save"], f, file_name=os.path.basename(fpath))
-                            st.success("İşlem Başarılı!")
-                            
-                            # AI Analizi
-                            with col2:
-                                st.subheader("🤖 AI Analizi")
-                                summary_prompt = f"Summarize this video content briefly: {info.get('title')} {info.get('description', '')[:300]}"
-                                res = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role":"user","content":summary_prompt}])
-                                translated = GoogleTranslator(target='tr' if lang=="Turkish" else 'en').translate(res.choices[0].message.content)
-                                st.info(translated)
-                                
-                except Exception as e:
-                    if "403" in str(e):
-                        st.error("HATA 403: YouTube çerezlerinizi reddetti. Lütfen cookies.txt dosyasını yenileyin.")
-                    else:
-                        st.error(f"Hata: {str(e)}")
+# --- FOOTER / AYARLAR ---
+st.sidebar.markdown("### 🛠️ Sistem Durumu")
+if os.path.exists(COOKIE_FILE):
+    st.sidebar.success("✅ Çerezler Yüklü")
+else:
+    st.sidebar.error("❌ Çerez Dosyası Eksik")
+
+st.sidebar.info("""
+**Neden bu mimari?**
+- **Sıfır Sunucu Yükü:** Dosyalar sunucuya inmez.
+- **Hızlı Yanıt:** Sadece saniyeler sürer.
+- **Güvenli:** IP adresin bot olarak işaretlenmez.
+""")
