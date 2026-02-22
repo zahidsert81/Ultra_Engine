@@ -39,7 +39,7 @@ texts = {
 T = texts[lang]
 
 # Çerez Dosyası Kontrolü (GitHub deponuzdaki dosya adlarına göre)
-cookie_file = "cookies.txt"
+cookie_file = "cookies.text"
 if not os.path.exists(cookie_file):
     cookie_file = "www.youtube.com_cookies.txt" # Alternatif dosya adı kontrolü
 
